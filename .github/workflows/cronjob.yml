@@ -2,9 +2,11 @@ name: Freex Monitor Cronjob
 
 on:
   schedule:
-    # 毎日 日本時間の 8:00, 12:00, 18:00 に自動実行 (UTC 23:00, 3:00, 9:00)
-    - cron: '0 23,3,9 * * *'
-  workflow_dispatch: # 手動実行用ボタンを有効化
+    # 毎日 日本時間 09:00, 12:00, 19:00 に自動実行 (UTC 00:00, 03:00, 10:00)
+    - cron: '0 0,3,10 * * *'
+    # 毎日 日本時間 18:45 に自動実行 (UTC 09:45)
+    - cron: '45 9 * * *'
+  workflow_dispatch:
 
 jobs:
   scrape-and-notify:
