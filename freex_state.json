@@ -1,0 +1,60 @@
+{
+    "schedule": {
+        "2026 JAPAN OPEN　　第１戦": {
+            "date": "2026年09月06日（日）",
+            "status": "募集終了"
+        },
+        "2026 JAPAN OPEN　　第２戦": {
+            "date": "2026年09月19日（土）",
+            "status": "エントリーする"
+        },
+        "2026 JAPAN OPEN　　第３戦": {
+            "date": "2026年10月04日（日）",
+            "status": "エントリーする"
+        },
+        "2026 JAPAN OPEN　　第４戦": {
+            "date": "2026年10月25日（日）",
+            "status": "エントリーする"
+        },
+        "2026 JAPAN OPEN　　第５戦": {
+            "date": "2026年11月22日（日）",
+            "status": "募集開始前"
+        },
+        "2026 JAPAN OPEN　　第６戦": {
+            "date": "2026年12月06日（日）",
+            "status": "募集開始前"
+        },
+        "2026 JAPAN MASTERS第1戦": {
+            "date": "2027年01月17日（日）",
+            "status": "ステータス不明"
+        },
+        "2026 JAPAN MASTERS第２戦": {
+            "date": "2027年01月31日（日）",
+            "status": "ステータス不明"
+        },
+        "2026 JAPAN MASTERS第３戦": {
+            "date": "2027年02月23日（火 祝）",
+            "status": "ステータス不明"
+        },
+        "2nd JAPAN AREA SUPER CLASSIC 予選　　（2026シーズン）": {
+            "date": "2027年05月22日（土）",
+            "status": "ステータス不明"
+        }
+    },
+    "result": {
+        "2026 JAPAN OPEN　　第１戦_アングラーズパークキングフィッシャー": [
+            {
+                "name": "横井 晃義（31）",
+                "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/横井.jpg"
+            },
+            {
+                "name": "佐々木 陽進（18）",
+                "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/佐々木.jpg"
+            },
+            {
+                "name": "関口 達也（39）",
+                "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/関口.jpg"
+            }
+        ]
+    }
+}
