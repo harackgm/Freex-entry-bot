@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 
 # ==========================================
@@ -50,6 +51,7 @@ def main():
         "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/"
     )
     send_line_message(schedule_msg)
+    time.sleep(1)
     
     # 2. 大会結果（写真付き）の通知デザイン確認
     result_msg = (
@@ -57,7 +59,6 @@ def main():
         "2026 JAPAN OPEN  第１戦_アングラーズパークキングフィッシャー\n"
         "https://freex-areatrout.com/event/area-trout-championship-2026/result/"
     )
-    # 公式掲載のサンプル画像URL
     sample_image = "https://freex-areatrout.com/wp-content/uploads/2026/02/横井.jpg"
     
     send_line_message(result_msg, sample_image)
