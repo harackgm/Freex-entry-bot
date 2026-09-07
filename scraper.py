@@ -1,17 +1,53 @@
+import requests
+from bs4 import BeautifulSoup
+import json
 import os
 import time
-import requests
+import random
+from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# テスト送信専用設定（外部アクセス・DB操作なし）
+# 設定項目
 # ==========================================
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
 LINE_USER_ID = os.getenv("LINE_USER_ID", "")
+STATE_FILE = "freex_state.json"
+MAX_NOTIFY_LIMIT = 5  # 一度に通知する最大件数（これを超えると自動スキップ）
+
+# JSTタイムゾーン（日本時間）
+JST = timezone(timedelta(hours=+9), 'JST')
+
+# 監視対象URL
+URLS = {
+    "schedule": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+    "result": "https://freex-areatrout.com/event/area-trout-championship-2026/result/"
+}
+
+# サーバー負荷対策：ブラウザ情報の擬装
+HEADERS_BASE = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+    "Cache-Control": "max-age=0",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-User": "?1"
+}
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0"
+]
 
 def send_line_message(text, image_url=None):
-    """LINE Messaging API を使用してテストメッセージを送る"""
+    """LINE Messaging API を使用してPush通知を送る"""
     if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
-        print("エラー: LINEのトークンまたはユーザーIDが設定されていません。")
+        print(f"[LOG ONLY]\n{text}")
+        if image_url:
+            print(f"[IMAGE URL] {image_url}")
         return
 
     url = "https://api.line.me/v2/bot/message/push"
@@ -36,32 +72,136 @@ def send_line_message(text, image_url=None):
     try:
         response = requests.post(url, headers=headers, json=data, timeout=15)
         response.raise_for_status()
-        print("LINEへのテストメッセージ送信に成功しました。")
     except Exception as e:
         print(f"LINE通知エラー: {e}")
 
+def load_state():
+    """過去のデータを読み込む"""
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"schedule": {}, "result": {}}
+
+def save_state(state):
+    """最新のデータを保存する"""
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=4)
+
+def fetch_html(url):
+    """HTMLを取得（ゆらぎ待機・短時間タイムアウト）"""
+    headers = HEADERS_BASE.copy()
+    headers["User-Agent"] = random.choice(USER_AGENTS)
+    
+    # サーバー負荷軽減用のゆらぎ待機
+    time.sleep(random.uniform(3.0, 6.0))
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=12)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        print(f"取得エラー ({url}): {e}")
+        return None
+
+def scrape_schedule(html):
+    """スケジュール（エントリー状況）の解析"""
+    soup = BeautifulSoup(html, "html.parser")
+    data = {}
+    table = soup.find("table", class_="schedules-table")
+    if not table:
+        return data
+
+    rows = table.find("tbody").find_all("tr")
+    for row in rows:
+        cols = row.find_all("td")
+        if len(cols) >= 5:
+            match_name = cols[0].get_text(strip=True)
+            date_info = cols[1].get_text(strip=True)
+            status_badge = cols[4].find("span", class_="status-badge")
+            status_text = status_badge.get_text(strip=True) if status_badge else "ステータス不明"
+            
+            data[match_name] = {
+                "date": date_info,
+                "status": status_text
+            }
+    return data
+
+def scrape_result(html):
+    """大会結果の解析"""
+    soup = BeautifulSoup(html, "html.parser")
+    data = {}
+    
+    titles = soup.find_all("h3", class_="result-item-title")
+    for title in titles:
+        match_name = title.get_text(strip=True)
+        results = []
+        
+        result_list = title.find_next_sibling("div", class_="result-list")
+        if result_list:
+            items = result_list.find_all("div", class_="result-item")
+            for item in items:
+                img_tag = item.find("img")
+                name_tag = item.find("h3")
+                if img_tag and name_tag:
+                    img_url = img_tag.get("src")
+                    player_name = name_tag.get_text(strip=True)
+                    results.append({"name": player_name, "image": img_url})
+        
+        data[match_name] = results
+    return data
+
 def main():
-    print("【デザイン確認用テスト送信を開始します】")
-    
-    # 1. エントリー状況更新の通知デザイン確認
-    schedule_msg = (
-        "🔔 エントリー状況更新\n"
-        "2026 JAPAN OPEN  第５戦\n"
-        "状態: 募集開始前 ➔ エントリーする\n"
-        "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/"
-    )
-    send_line_message(schedule_msg)
-    time.sleep(1)
-    
-    # 2. 大会結果（写真付き）の通知デザイン確認
-    result_msg = (
-        "🏆 大会結果が更新されました\n"
-        "2026 JAPAN OPEN  第１戦_アングラーズパークキングフィッシャー\n"
-        "https://freex-areatrout.com/event/area-trout-championship-2026/result/"
-    )
-    sample_image = "https://freex-areatrout.com/wp-content/uploads/2026/02/横井.jpg"
-    
-    send_line_message(result_msg, sample_image)
+    print(f"[{datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S')}] 監視を開始します。")
+    old_state = load_state()
+    new_state = {"schedule": {}, "result": {}}
+    notifications = []
+
+    # 1. スケジュールの監視
+    html_schedule = fetch_html(URLS["schedule"])
+    if html_schedule:
+        new_state["schedule"] = scrape_schedule(html_schedule)
+        
+        for match, info in new_state["schedule"].items():
+            old_info = old_state["schedule"].get(match)
+            if not old_info:
+                notifications.append({"msg": f"🆕 新規大会追加\n{match}\n開催日: {info['date']}\n状態: {info['status']}\n{URLS['schedule']}", "img": None})
+            elif old_info["status"] != info["status"]:
+                notifications.append({"msg": f"🔔 エントリー状況更新\n{match}\n状態: {old_info['status']} ➔ {info['status']}\n{URLS['schedule']}", "img": None})
+    else:
+        print("⚠️ スケジュールの取得に失敗したため、過去のデータを引き継ぎます。")
+        new_state["schedule"] = old_state.get("schedule", {})
+
+    # 2. 大会結果の監視
+    html_result = fetch_html(URLS["result"])
+    if html_result:
+        new_state["result"] = scrape_result(html_result)
+        
+        for match, results in new_state["result"].items():
+            old_results = old_state["result"].get(match, [])
+            if len(results) > len(old_results):
+                msg = f"🏆 大会結果が更新されました\n{match}\n{URLS['result']}"
+                img_url = results[0]["image"] if results else None
+                notifications.append({"msg": msg, "img": img_url})
+    else:
+        print("⚠️ 大会結果の取得に失敗したため、過去のデータを引き継ぎます。")
+        new_state["result"] = old_state.get("result", {})
+
+    # ==========================================
+    # 大量通知ストッパー（MAX_LIMIT制御）
+    # ==========================================
+    if len(notifications) > MAX_NOTIFY_LIMIT:
+        print(f"⚠️ 検知数が {len(notifications)} 件となり上限({MAX_NOTIFY_LIMIT}件)を超えました。通知をスキップしてDBのみ更新します。")
+    else:
+        for notify in notifications:
+            send_line_message(notify["msg"], notify["img"])
+            time.sleep(2)  # 通知間のゆらぎ
+
+    # 状態の保存
+    save_state(new_state)
+    print("監視処理が完了しました。")
 
 if __name__ == "__main__":
     main()
