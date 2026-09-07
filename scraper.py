@@ -15,7 +15,7 @@ LINE_USER_ID = os.getenv("LINE_USER_ID", "")
 STATE_FILE = "freex_state.json"
 MAX_NOTIFY_LIMIT = 5  # 一度に通知する最大件数（これを超えると通知スキップ）
 
-# JSTタイムゾーン
+# JSTタイムゾーン（日本時間）
 JST = timezone(timedelta(hours=+9), 'JST')
 
 # 監視対象URL
