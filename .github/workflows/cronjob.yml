@@ -1,12 +1,8 @@
 name: Freex Monitor Cronjob
 
 on:
-  schedule:
-    # 毎日 日本時間 09:00, 12:00, 19:00 に自動実行 (UTC 00:00, 03:00, 10:00)
-    - cron: '0 0,3,10 * * *'
-    # 毎日 日本時間 18:45 に自動実行 (UTC 09:45)
-    - cron: '45 9 * * *'
-  workflow_dispatch:
+  # GitHub内部タイマー(schedule)を削除し、外部(cron-job.org)からの呼び出し・手動実行専用に統一
+  workflow_dispatch: 
 
 jobs:
   scrape-and-notify:
