@@ -1,4 +1,6 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 import json
 import os
@@ -24,12 +26,25 @@ URLS = {
     "result": "https://freex-areatrout.com/event/area-trout-championship-2026/result/"
 }
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
-}
+# サーバー負荷対策：ブラウザ情報をランダム化
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/116.0"
+]
+
+def get_session():
+    """リトライ機能付きのセッションを作成"""
+    session = requests.Session()
+    # 接続エラー時に最大3回までリトライ（徐々に待機時間を延ばす）
+    retry = Retry(total=3, read=3, connect=3, backoff_factor=2.0, status_forcelist=[500, 502, 503, 504])
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
 
 def send_line_message(text, image_url=None):
-    """LINE Messaging API (Push Message) を使用して通知を送る"""
+    """LINE Messaging API を使用して通知を送る"""
     if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
         print(f"[TEST NOTIFY]\n{text}")
         if image_url:
@@ -42,7 +57,6 @@ def send_line_message(text, image_url=None):
         "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
     }
     
-    # メッセージオブジェクトの構築
     messages = [{"type": "text", "text": text}]
     if image_url:
         messages.append({
@@ -57,7 +71,7 @@ def send_line_message(text, image_url=None):
     }
     
     try:
-        response = requests.post(url, headers=headers, json=data, timeout=10)
+        response = requests.post(url, headers=headers, json=data, timeout=30)
         response.raise_for_status()
     except Exception as e:
         print(f"LINE通知エラー: {e}")
@@ -76,12 +90,13 @@ def save_state(state):
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, ensure_ascii=False, indent=4)
 
-def fetch_html(url):
+def fetch_html(url, session):
     """HTMLを取得し、ゆらぎのスリープを入れる"""
+    headers = {"User-Agent": random.choice(USER_AGENTS)}
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
+        time.sleep(random.uniform(3.0, 7.0))  # サーバー負荷軽減のゆらぎ
+        response = session.get(url, headers=headers, timeout=30) # タイムアウト延長
         response.raise_for_status()
-        time.sleep(random.uniform(2.0, 5.0))  # サーバー負荷軽減のゆらぎ
         return response.text
     except Exception as e:
         print(f"取得エラー ({url}): {e}")
@@ -139,9 +154,11 @@ def main():
     old_state = load_state()
     new_state = {"schedule": {}, "result": {}}
     notifications = []
+    
+    session = get_session()
 
     # 1. スケジュールの監視
-    html_schedule = fetch_html(URLS["schedule"])
+    html_schedule = fetch_html(URLS["schedule"], session)
     if html_schedule:
         new_state["schedule"] = scrape_schedule(html_schedule)
         
@@ -151,9 +168,12 @@ def main():
                 notifications.append({"msg": f"🆕 新規大会追加\n{match}\n開催日: {info['date']}\n状態: {info['status']}\n{URLS['schedule']}", "img": None})
             elif old_info["status"] != info["status"]:
                 notifications.append({"msg": f"🔔 エントリー状況更新\n{match}\n状態: {old_info['status']} ➔ {info['status']}\n{URLS['schedule']}", "img": None})
+    else:
+        print("⚠️ スケジュールの取得に失敗したため、過去のデータを引き継ぎます。")
+        new_state["schedule"] = old_state.get("schedule", {})
 
     # 2. 大会結果の監視
-    html_result = fetch_html(URLS["result"])
+    html_result = fetch_html(URLS["result"], session)
     if html_result:
         new_state["result"] = scrape_result(html_result)
         
@@ -163,6 +183,9 @@ def main():
                 msg = f"🏆 大会結果が更新されました\n{match}\n{URLS['result']}"
                 img_url = results[0]["image"] if results else None
                 notifications.append({"msg": msg, "img": img_url})
+    else:
+        print("⚠️ 大会結果の取得に失敗したため、過去のデータを引き継ぎます。")
+        new_state["result"] = old_state.get("result", {})
 
     # ==========================================
     # 大量通知ストッパー（MAX_LIMIT制御）
@@ -172,7 +195,7 @@ def main():
     else:
         for notify in notifications:
             send_line_message(notify["msg"], notify["img"])
-            time.sleep(1)  # 通知間のゆらぎ
+            time.sleep(2)  # 通知間のゆらぎ
 
     # 状態の保存
     save_state(new_state)
