@@ -9,8 +9,9 @@ from datetime import datetime, timedelta, timezone
 # ==========================================
 # 設定項目
 # ==========================================
-# GitHub SecretsからLINEトークンを取得
-LINE_NOTIFY_TOKEN = os.getenv("LINE_NOTIFY_TOKEN", "")  
+# GitHub SecretsからLINE Messaging APIの情報を取得
+LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
+LINE_USER_ID = os.getenv("LINE_USER_ID", "")
 STATE_FILE = "freex_state.json"
 MAX_NOTIFY_LIMIT = 5  # 一度に通知する最大件数（これを超えると通知スキップ）
 
@@ -27,26 +28,41 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
 }
 
-def send_line_notify(message, image_url=None):
-    """LINE Notifyに通知を送る"""
-    if not LINE_NOTIFY_TOKEN:
-        print(f"[TEST NOTIFY]\n{message}")
+def send_line_message(text, image_url=None):
+    """LINE Messaging API (Push Message) を使用して通知を送る"""
+    if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
+        print(f"[TEST NOTIFY]\n{text}")
         if image_url:
             print(f"[IMAGE URL] {image_url}")
         return
 
-    url = "https://notify-api.line.me/api/notify"
-    headers = {"Authorization": f"Bearer {LINE_NOTIFY_TOKEN}"}
-    data = {"message": message}
+    url = "https://api.line.me/v2/bot/message/push"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
+    }
     
+    # メッセージオブジェクトの構築
+    messages = [{"type": "text", "text": text}]
     if image_url:
-        data["imageThumbnail"] = image_url
-        data["imageFullsize"] = image_url
-        
+        messages.append({
+            "type": "image",
+            "originalContentUrl": image_url,
+            "previewImageUrl": image_url
+        })
+
+    data = {
+        "to": LINE_USER_ID,
+        "messages": messages
+    }
+    
     try:
-        requests.post(url, headers=headers, data=data, timeout=10)
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        response.raise_for_status()
     except Exception as e:
         print(f"LINE通知エラー: {e}")
+        if response.text:
+            print(f"エラー詳細: {response.text}")
 
 def load_state():
     """過去のデータを読み込む"""
@@ -155,7 +171,7 @@ def main():
         print(f"⚠️ 検知数が {len(notifications)} 件となり上限({MAX_NOTIFY_LIMIT}件)を超えました。通知をスキップしてDBのみ更新します。")
     else:
         for notify in notifications:
-            send_line_notify(notify["msg"], notify["img"])
+            send_line_message(notify["msg"], notify["img"])
             time.sleep(1)  # 通知間のゆらぎ
 
     # 状態の保存
