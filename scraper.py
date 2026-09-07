@@ -42,11 +42,16 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 ]
 
-def safe_encode_url(url):
+def safe_encode_url(url, bust_cache=False):
+    """日本語エンコードとLINE画像キャッシュ回避(タイムスタンプ付与)"""
     if not url: return ""
     parsed = urllib.parse.urlparse(url)
     encoded_path = urllib.parse.quote(parsed.path)
-    return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, encoded_path, parsed.params, parsed.query, parsed.fragment))
+    query = parsed.query
+    if bust_cache:
+        timestamp = int(time.time())
+        query = f"{query}&t={timestamp}" if query else f"t={timestamp}"
+    return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, encoded_path, parsed.params, query, parsed.fragment))
 
 def send_line_payload(messages_payload):
     if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
@@ -111,8 +116,13 @@ def send_result_carousel(match_name, results, match_url, timing_msg="🏆 大会
     bubbles = []
     for idx, player in enumerate(results[:10]):
         rank_label = "🥇 優勝" if idx == 0 else "🥈 第2位" if idx == 1 else "🥉 第3位" if idx == 2 else f"第{idx+1}位"
-        img_url = safe_encode_url(player.get("image", ""))
-        if not img_url: img_url = FALLBACK_IMG
+        
+        # 写真表示時はLINEキャッシュ回避を有効化
+        raw_img_url = player.get("image", "")
+        if raw_img_url:
+            img_url = safe_encode_url(raw_img_url, bust_cache=True)
+        else:
+            img_url = safe_encode_url(FALLBACK_IMG, bust_cache=False)
 
         bubble = {
             "type": "bubble",
@@ -156,16 +166,22 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False, indent=4)
 
 def fetch_html(url):
+    """HTMLを取得（リトライ機構＋ゆらぎ待機）"""
     headers = HEADERS_BASE.copy()
     headers["User-Agent"] = random.choice(USER_AGENTS)
-    time.sleep(random.uniform(3.0, 6.0))
-    try:
-        response = requests.get(url, headers=headers, timeout=12)
-        response.raise_for_status()
-        return response.text
-    except Exception as e:
-        print(f"取得エラー ({url}): {e}")
-        return None
+    
+    max_retries = 3
+    for attempt in range(max_retries):
+        time.sleep(random.uniform(3.0, 6.0))
+        try:
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
+            return response.text
+        except Exception as e:
+            print(f"取得エラー ({url}) - {attempt + 1}回目: {e}")
+            if attempt == max_retries - 1:
+                return None
+            time.sleep(random.uniform(5.0, 10.0))  # エラー時は長めに待機してリトライ
 
 def parse_entry_start(accept_period):
     if not accept_period: return None
@@ -183,20 +199,28 @@ def scrape_schedule(html):
     data = {}
     table = soup.find("table", class_="schedules-table")
     if not table: return data
-    for row in table.find("tbody").find_all("tr"):
+    
+    tbody = table.find("tbody")
+    if not tbody: return data  # HTML構造変更時のクラッシュ防止
+
+    for row in tbody.find_all("tr"):
         cols = row.find_all("td")
         if len(cols) >= 5:
-            match_name = cols[0].get_text(strip=True)
-            accept_col = cols[4]
-            status_badge = accept_col.find("span", class_="status-badge")
-            link_tag = accept_col.find("a")
-            data[match_name] = {
-                "date": cols[1].get_text(strip=True),
-                "location": cols[2].get_text(strip=True),
-                "accept_period": accept_col.get_text(strip=True).split('\n')[0].strip(),
-                "status": status_badge.get_text(strip=True) if status_badge else "ステータス不明",
-                "form_url": link_tag.get("href") if link_tag else URLS["schedule"]
-            }
+            try:
+                match_name = cols[0].get_text(strip=True)
+                accept_col = cols[4]
+                status_badge = accept_col.find("span", class_="status-badge")
+                link_tag = accept_col.find("a")
+                data[match_name] = {
+                    "date": cols[1].get_text(strip=True),
+                    "location": cols[2].get_text(strip=True),
+                    "accept_period": accept_col.get_text(strip=True).split('\n')[0].strip(),
+                    "status": status_badge.get_text(strip=True) if status_badge else "ステータス不明",
+                    "form_url": link_tag.get("href") if link_tag else URLS["schedule"]
+                }
+            except Exception as e:
+                print(f"スケジュール解析スキップ（構造エラー）: {e}")
+                continue
     return data
 
 def scrape_result(html):
@@ -208,10 +232,14 @@ def scrape_result(html):
         result_list = title.find_next_sibling("div", class_="result-list")
         if result_list:
             for item in result_list.find_all("div", class_="result-item"):
-                img = item.find("img")
-                name = item.find("h3")
-                if img and name:
-                    results.append({"name": name.get_text(strip=True), "image": img.get("src")})
+                try:
+                    img = item.find("img")
+                    name = item.find("h3")
+                    if img and name:
+                        results.append({"name": name.get_text(strip=True), "image": img.get("src")})
+                except Exception as e:
+                    print(f"結果解析スキップ（構造エラー）: {e}")
+                    continue
         data[match_name] = results
     return data
 
@@ -279,22 +307,13 @@ def main():
     if html_result:
         scraped_results = scrape_result(html_result)
         
-        # 古いデータ構造からの安全移行（過去分はすべて写真通知済み扱いとする）
-        for match, data in old_state.get("result", {}).items():
-            if isinstance(data, list):
-                old_state["result"][match] = {"players": data, "first_detected": now.isoformat(), "photo_notified": True}
-            elif isinstance(data, dict) and "photo_notified" not in data:
-                data["photo_notified"] = True
-                old_state["result"][match] = data
-
         for match, current_players in scraped_results.items():
-            old_match_data = old_state["result"].get(match, {})
+            old_match_data = old_state.get("result", {}).get(match, {})
             old_players = old_match_data.get("players", [])
             
             first_detected = old_match_data.get("first_detected", now.isoformat())
             photo_notified = old_match_data.get("photo_notified", True)
 
-            # 選手が追加されたか（新規結果または入賞者追加）
             is_new_or_updated = len(current_players) > len(old_players)
             has_photo = has_valid_photo(current_players)
 
@@ -302,22 +321,18 @@ def main():
             timing_msg = "🏆 大会結果速報"
 
             if is_new_or_updated:
-                # 新規検知またはデータ追加時は即時通知
                 should_notify = True
                 first_detected = now.isoformat()
-                photo_notified = has_photo  # 写真があればTrue、なければFalse(待機開始)
+                photo_notified = has_photo
             
             elif not photo_notified:
-                # 既に通知済みだが写真待ちの場合
                 first_det_dt = datetime.fromisoformat(first_detected)
                 if now < first_det_dt + timedelta(hours=48):
                     if has_photo:
-                        # 48時間以内に写真が追加されたため再通知
                         should_notify = True
                         photo_notified = True
                         timing_msg = "📸 写真が追加されました"
                 else:
-                    # 48時間経過したため写真待機を諦める（タイムアウト）
                     print(f"[{match}] 48時間経過したため、写真の待機を終了します。")
                     photo_notified = True
 
