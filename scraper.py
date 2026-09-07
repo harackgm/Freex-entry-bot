@@ -2,7 +2,7 @@ import os
 import requests
 
 # ==========================================
-# テスト送信専用設定
+# テスト送信専用設定（外部アクセス・DB操作なし）
 # ==========================================
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
 LINE_USER_ID = os.getenv("LINE_USER_ID", "")
@@ -45,7 +45,7 @@ def main():
     # 1. エントリー状況更新の通知デザイン確認
     schedule_msg = (
         "🔔 エントリー状況更新\n"
-        "2026 JAPAN OPEN {3戦\n"
+        "2026 JAPAN OPEN  第５戦\n"
         "状態: 募集開始前 ➔ エントリーする\n"
         "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/"
     )
