@@ -52,7 +52,7 @@ def main():
     )
     send_line_message(schedule_msg)
     
-    # 連続送信による制限を防ぐための1秒待機
+    # 連続送信防止用の待機
     time.sleep(1)
     
     # 2. 大会結果（写真付き）の通知デザイン確認
