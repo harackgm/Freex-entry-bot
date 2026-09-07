@@ -2,7 +2,7 @@ import os
 import requests
 
 # ==========================================
-# 設定項目
+# テスト送信専用設定
 # ==========================================
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
 LINE_USER_ID = os.getenv("LINE_USER_ID", "")
@@ -35,17 +35,17 @@ def send_line_message(text, image_url=None):
     try:
         response = requests.post(url, headers=headers, json=data, timeout=15)
         response.raise_for_status()
-        print("テストメッセージの送信に成功しました。")
+        print("LINEへのテストメッセージ送信に成功しました。")
     except Exception as e:
         print(f"LINE通知エラー: {e}")
 
 def main():
-    print("【通知デザイン確認用のテスト送信を開始します】")
+    print("【デザイン確認用テスト送信を開始します】")
     
     # 1. エントリー状況更新の通知デザイン確認
     schedule_msg = (
-        "🔔 エントリー状況更新（テスト）\n"
-        "2026 JAPAN OPEN 第５戦\n"
+        "🔔 エントリー状況更新\n"
+        "2026 JAPAN OPEN {3戦\n"
         "状態: 募集開始前 ➔ エントリーする\n"
         "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/"
     )
@@ -53,11 +53,11 @@ def main():
     
     # 2. 大会結果（写真付き）の通知デザイン確認
     result_msg = (
-        "🏆 大会結果が更新されました（テスト）\n"
-        "2026 JAPAN OPEN 第１戦_アングラーズパークキングフィッシャー\n"
+        "🏆 大会結果が更新されました\n"
+        "2026 JAPAN OPEN  第１戦_アングラーズパークキングフィッシャー\n"
         "https://freex-areatrout.com/event/area-trout-championship-2026/result/"
     )
-    # サンプル画像（公式サイト掲載の優勝者画像）
+    # 公式掲載のサンプル画像URL
     sample_image = "https://freex-areatrout.com/wp-content/uploads/2026/02/横井.jpg"
     
     send_line_message(result_msg, sample_image)
