@@ -132,19 +132,23 @@
         }
     },
     "result": {
-        "2026 JAPAN OPEN　　第１戦_アングラーズパークキングフィッシャー": [
-            {
-                "name": "横井 晃義（31）",
-                "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/横井.jpg"
-            },
-            {
-                "name": "佐々木 陽進（18）",
-                "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/佐々木.jpg"
-            },
-            {
-                "name": "関口 達也（39）",
-                "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/関口.jpg"
-            }
-        ]
+        "2026 JAPAN OPEN　　第１戦_アングラーズパークキングフィッシャー": {
+            "players": [
+                {
+                    "name": "横井 晃義（31）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/横井.jpg"
+                },
+                {
+                    "name": "佐々木 陽進（18）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/佐々木.jpg"
+                },
+                {
+                    "name": "関口 達也（39）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/関口.jpg"
+                }
+            ],
+            "first_detected": "2026-09-08T02:37:34.290504+09:00",
+            "photo_notified": true
+        }
     }
 }
