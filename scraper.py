@@ -1,6 +1,4 @@
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 import json
 import os
@@ -26,22 +24,24 @@ URLS = {
     "result": "https://freex-areatrout.com/event/area-trout-championship-2026/result/"
 }
 
-# サーバー負荷対策：ブラウザ情報をランダム化
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/116.0"
-]
+# ブラウザリクエストの基本ヘッダー（WAF・ボット判定対策）
+HEADERS_BASE = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+    "Cache-Control": "max-age=0",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-User": "?1"
+}
 
-def get_session():
-    """リトライ機能付きのセッションを作成"""
-    session = requests.Session()
-    # 接続エラー時に最大3回までリトライ（徐々に待機時間を延ばす）
-    retry = Retry(total=3, read=3, connect=3, backoff_factor=2.0, status_forcelist=[500, 502, 503, 504])
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount('http://', adapter)
-    session.mount('https://', adapter)
-    return session
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0"
+]
 
 def send_line_message(text, image_url=None):
     """LINE Messaging API を使用して通知を送る"""
@@ -71,18 +71,19 @@ def send_line_message(text, image_url=None):
     }
     
     try:
-        response = requests.post(url, headers=headers, json=data, timeout=30)
+        response = requests.post(url, headers=headers, json=data, timeout=15)
         response.raise_for_status()
     except Exception as e:
         print(f"LINE通知エラー: {e}")
-        if response.text:
-            print(f"エラー詳細: {response.text}")
 
 def load_state():
     """過去のデータを読み込む"""
     if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
     return {"schedule": {}, "result": {}}
 
 def save_state(state):
@@ -90,12 +91,17 @@ def save_state(state):
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, ensure_ascii=False, indent=4)
 
-def fetch_html(url, session):
-    """HTMLを取得し、ゆらぎのスリープを入れる"""
-    headers = {"User-Agent": random.choice(USER_AGENTS)}
+def fetch_html(url):
+    """HTMLを取得（ゆらぎアクセス＆通信失敗時は即切り上げ）"""
+    headers = HEADERS_BASE.copy()
+    headers["User-Agent"] = random.choice(USER_AGENTS)
+    
+    # サーバーへ配慮したランダム待機時間（ゆらぎ）
+    time.sleep(random.uniform(3.0, 6.0))
+    
     try:
-        time.sleep(random.uniform(3.0, 7.0))  # サーバー負荷軽減のゆらぎ
-        response = session.get(url, headers=headers, timeout=30) # タイムアウト延長
+        # タイムアウト12秒設定（無応答時は早く切り上げてサーバー負荷と時間を抑える）
+        response = requests.get(url, headers=headers, timeout=12)
         response.raise_for_status()
         return response.text
     except Exception as e:
@@ -154,11 +160,9 @@ def main():
     old_state = load_state()
     new_state = {"schedule": {}, "result": {}}
     notifications = []
-    
-    session = get_session()
 
     # 1. スケジュールの監視
-    html_schedule = fetch_html(URLS["schedule"], session)
+    html_schedule = fetch_html(URLS["schedule"])
     if html_schedule:
         new_state["schedule"] = scrape_schedule(html_schedule)
         
@@ -173,7 +177,7 @@ def main():
         new_state["schedule"] = old_state.get("schedule", {})
 
     # 2. 大会結果の監視
-    html_result = fetch_html(URLS["result"], session)
+    html_result = fetch_html(URLS["result"])
     if html_result:
         new_state["result"] = scrape_result(html_result)
         
