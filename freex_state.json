@@ -2,43 +2,133 @@
     "schedule": {
         "2026 JAPAN OPEN　　第１戦": {
             "date": "2026年09月06日（日）",
-            "status": "募集終了"
+            "location": "栃木県\nアングラーズパークキングフィッシャー",
+            "accept_period": "2026-08-01～2026-09-04募集終了",
+            "status": "募集終了",
+            "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+            "notified": {
+                "24h": true,
+                "15m": true,
+                "0m": true,
+                "next_m": true
+            }
         },
         "2026 JAPAN OPEN　　第２戦": {
             "date": "2026年09月19日（土）",
-            "status": "エントリーする"
+            "location": "長野県\nハーブの里フィッシングエリア",
+            "accept_period": "2026-08-10～2026-09-18エントリーする",
+            "status": "エントリーする",
+            "form_url": "https://forms.gle/cmrGKqufWbhkJ72s6",
+            "notified": {
+                "24h": true,
+                "15m": true,
+                "0m": true,
+                "next_m": true
+            }
         },
         "2026 JAPAN OPEN　　第３戦": {
             "date": "2026年10月04日（日）",
-            "status": "エントリーする"
+            "location": "新潟県\n五頭フィッシングパーク",
+            "accept_period": "2026-08-20～2026-10-03エントリーする",
+            "status": "エントリーする",
+            "form_url": "https://forms.gle/woNuuHBgy4GnCaHX6",
+            "notified": {
+                "24h": true,
+                "15m": true,
+                "0m": true,
+                "next_m": true
+            }
         },
         "2026 JAPAN OPEN　　第４戦": {
             "date": "2026年10月25日（日）",
-            "status": "エントリーする"
+            "location": "長野県\n平谷湖フィッシングスポット",
+            "accept_period": "2026-09-01～2026-10-24エントリーする",
+            "status": "エントリーする",
+            "form_url": "https://forms.gle/T44vL4fd5tSchF8V7",
+            "notified": {
+                "24h": true,
+                "15m": true,
+                "0m": true,
+                "next_m": true
+            }
         },
         "2026 JAPAN OPEN　　第５戦": {
             "date": "2026年11月22日（日）",
-            "status": "募集開始前"
+            "location": "群馬県\nフィッシングポイントベリーズ迦葉山",
+            "accept_period": "2026-10-01～2026-11-21募集開始前",
+            "status": "募集開始前",
+            "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+            "notified": {
+                "24h": false,
+                "15m": false,
+                "0m": false,
+                "next_m": false
+            }
         },
         "2026 JAPAN OPEN　　第６戦": {
             "date": "2026年12月06日（日）",
-            "status": "募集開始前"
+            "location": "静岡県\nアルクスポンド焼津",
+            "accept_period": "2026-11-01～2026-12-05募集開始前",
+            "status": "募集開始前",
+            "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+            "notified": {
+                "24h": false,
+                "15m": false,
+                "0m": false,
+                "next_m": false
+            }
         },
         "2026 JAPAN MASTERS第1戦": {
             "date": "2027年01月17日（日）",
-            "status": "ステータス不明"
+            "location": "神奈川県\n足柄キャスティングエリア",
+            "accept_period": "未定",
+            "status": "ステータス不明",
+            "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+            "notified": {
+                "24h": true,
+                "15m": true,
+                "0m": true,
+                "next_m": true
+            }
         },
         "2026 JAPAN MASTERS第２戦": {
             "date": "2027年01月31日（日）",
-            "status": "ステータス不明"
+            "location": "群馬県\n太田フィッシングクラブ",
+            "accept_period": "未定",
+            "status": "ステータス不明",
+            "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+            "notified": {
+                "24h": true,
+                "15m": true,
+                "0m": true,
+                "next_m": true
+            }
         },
         "2026 JAPAN MASTERS第３戦": {
             "date": "2027年02月23日（火 祝）",
-            "status": "ステータス不明"
+            "location": "千葉県\nフィッシングクラブジョイバレー",
+            "accept_period": "未定",
+            "status": "ステータス不明",
+            "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+            "notified": {
+                "24h": true,
+                "15m": true,
+                "0m": true,
+                "next_m": true
+            }
         },
         "2nd JAPAN AREA SUPER CLASSIC 予選　　（2026シーズン）": {
             "date": "2027年05月22日（土）",
-            "status": "ステータス不明"
+            "location": "栃木県\n大芦川f＆cフィールドビレッジ",
+            "accept_period": "未定",
+            "status": "ステータス不明",
+            "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+            "notified": {
+                "24h": true,
+                "15m": true,
+                "0m": true,
+                "next_m": true
+            }
         }
     },
     "result": {
