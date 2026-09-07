@@ -1,31 +1,15 @@
 import os
 import json
 import requests
-import urllib.parse
 
 # ==========================================
-# カルーセル表示確認用テストコード（DB操作・サイト負荷ゼロ）
+# 本番さながらのエントリー通知 テスト送信専用設定
 # ==========================================
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
 LINE_USER_ID = os.getenv("LINE_USER_ID", "")
 
-def safe_encode_url(url):
-    """日本語ファイル名を含むURLをLINE API規格へ安全にエンコード"""
-    if not url:
-        return ""
-    parsed = urllib.parse.urlparse(url)
-    encoded_path = urllib.parse.quote(parsed.path)
-    return urllib.parse.urlunparse((
-        parsed.scheme,
-        parsed.netloc,
-        encoded_path,
-        parsed.params,
-        parsed.query,
-        parsed.fragment
-    ))
-
 def send_line_payload(messages_payload):
-    """LINE Messaging API (Push Message) 送信"""
+    """LINE Messaging API (Push Message) 送信関数"""
     if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
         print("[エラー] LINE_CHANNEL_ACCESS_TOKEN または LINE_USER_ID が未設定です。")
         return
@@ -43,45 +27,92 @@ def send_line_payload(messages_payload):
     try:
         response = requests.post(url, headers=headers, json=data, timeout=15)
         response.raise_for_status()
-        print("カルーセルテスト通知の送信に成功しました。")
+        print("本番想定エントリーテスト通知の送信に成功しました。")
     except Exception as e:
         print(f"LINE通知エラー: {e}")
         if 'response' in locals() and response.text:
             print(f"エラー詳細: {response.text}")
 
-def test_send_carousel():
-    """大会結果のカルーセル（Flex Message）テスト送信"""
-    match_name = "2026 JAPAN OPEN 第１戦_キングフィッシャー"
-    match_url = "https://freex-areatrout.com/event/area-trout-championship-2026/result/"
-    
-    # 実際の大会結果サンプルデータ（1位〜3位）
-    sample_results = [
-        {"name": "横井 晃義 選手", "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/横井.jpg"},
-        {"name": "佐々木 陽進 選手", "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/佐々木.jpg"},
-        {"name": "関口 達也 選手", "image": "https://freex-areatrout.com/wp-content/uploads/2026/02/関口.jpg"}
-    ]
+def test_send_entry_flex():
+    """本番さながらのエントリー用Flex Message送信"""
+    # 実際のWebサイトから取得される本番同等データ
+    match_name = "2026 JAPAN OPEN 第４戦"
+    event_date = "2026年10月25日（日）"
+    location = "長野県 平谷湖フィッシングスポット"
+    accept_period = "2026-09-01～2026-10-24"
+    status_change = "募集開始前 ➔ エントリー受付中"
+    entry_form_url = "https://forms.gle/T44vL4fd5tSchF8V7"  # 実際のフォームURL
 
-    bubbles = []
-    for idx, player in enumerate(sample_results):
-        rank_label = "🥇 優勝" if idx == 0 else "🥈 第2位" if idx == 1 else "🥉 第3位"
-        img_url = safe_encode_url(player["image"])
-
-        bubble = {
+    flex_payload = [{
+        "type": "flex",
+        "altText": f"🔔 エントリー状況更新: {match_name}",
+        "contents": {
             "type": "bubble",
-            "hero": {
-                "type": "image",
-                "url": img_url,
-                "size": "full",
-                "aspectRatio": "1:1",
-                "aspectMode": "cover"
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": "#0288D1",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "🔔 エントリー状況更新",
+                        "weight": "bold",
+                        "color": "#FFFFFF",
+                        "size": "sm"
+                    }
+                ]
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": rank_label, "weight": "bold", "size": "sm", "color": "#1DB446"},
-                    {"type": "text", "text": player["name"], "weight": "bold", "size": "lg", "margin": "xs", "wrap": True},
-                    {"type": "text", "text": match_name, "size": "xs", "color": "#888888", "margin": "sm", "wrap": True}
+                    {
+                        "type": "text",
+                        "text": match_name,
+                        "weight": "bold",
+                        "size": "xl",
+                        "wrap": True
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "margin": "lg",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "baseline",
+                                "contents": [
+                                    {"type": "text", "text": "状態", "color": "#aaaaaa", "size": "sm", "flex": 2},
+                                    {"type": "text", "text": status_change, "weight": "bold", "color": "#E53935", "size": "sm", "flex": 5, "wrap": True}
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "baseline",
+                                "contents": [
+                                    {"type": "text", "text": "開催日", "color": "#aaaaaa", "size": "sm", "flex": 2},
+                                    {"type": "text", "text": event_date, "color": "#666666", "size": "sm", "flex": 5, "wrap": True}
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "baseline",
+                                "contents": [
+                                    {"type": "text", "text": "会場", "color": "#aaaaaa", "size": "sm", "flex": 2},
+                                    {"type": "text", "text": location, "color": "#666666", "size": "sm", "flex": 5, "wrap": True}
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "baseline",
+                                "contents": [
+                                    {"type": "text", "text": "受付期間", "color": "#aaaaaa", "size": "sm", "flex": 2},
+                                    {"type": "text", "text": accept_period, "color": "#666666", "size": "sm", "flex": 5, "wrap": True}
+                                ]
+                            }
+                        ]
+                    }
                 ]
             },
             "footer": {
@@ -92,8 +123,8 @@ def test_send_carousel():
                         "type": "button",
                         "action": {
                             "type": "uri",
-                            "label": "結果詳細を見る",
-                            "uri": match_url
+                            "label": "エントリーフォームを開く",
+                            "uri": entry_form_url
                         },
                         "style": "primary",
                         "color": "#00B900",
@@ -102,22 +133,13 @@ def test_send_carousel():
                 ]
             }
         }
-        bubbles.append(bubble)
-
-    flex_payload = [{
-        "type": "flex",
-        "altText": f"🏆 大会結果更新: {match_name}",
-        "contents": {
-            "type": "carousel",
-            "contents": bubbles
-        }
     }]
     
     send_line_payload(flex_payload)
 
 def main():
-    print("【カルーセル表示のテスト送信を開始します】")
-    test_send_carousel()
+    print("【本番想定エントリー通知のテスト送信を開始します】")
+    test_send_entry_flex()
 
 if __name__ == "__main__":
     main()
