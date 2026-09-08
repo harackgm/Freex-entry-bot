@@ -9,10 +9,9 @@ import re
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# 設定項目（★テスト・管理者のみ通知モード★）
+# 設定項目（★一般公開・全員配信モード★）
 # ==========================================
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
-LINE_USER_ID = os.getenv("LINE_USER_ID", "")
 STATE_FILE = "freex_state.json"
 MAX_NOTIFY_LIMIT = 5  # 大量誤通知ストッパー
 
@@ -54,20 +53,20 @@ def safe_encode_url(url, bust_cache=False):
     return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, encoded_path, parsed.params, query, parsed.fragment))
 
 def send_line_payload(messages_payload):
-    """LINE Messaging API (Push Message) - 管理者へ直接送信（テストモード）"""
-    if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
-        print("[エラー] トークンまたはUSER_IDが未設定です")
+    """LINE Messaging API (Broadcast Message) - 登録者全員へ一斉送信"""
+    if not LINE_CHANNEL_ACCESS_TOKEN:
+        print("[エラー] トークンが未設定です")
         return
-    url = "https://api.line.me/v2/bot/message/push"
+    url = "https://api.line.me/v2/bot/message/broadcast"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
     }
-    data = {"to": LINE_USER_ID, "messages": messages_payload}
+    data = {"messages": messages_payload}
     try:
         response = requests.post(url, headers=headers, json=data, timeout=15)
         response.raise_for_status()
-        print("-> LINE通知（管理者テスト用）の送信に成功しました。")
+        print("-> LINE通知（全員配信）の送信に成功しました。")
     except Exception as e:
         print(f"-> LINE通知エラー: {e}")
 
@@ -144,18 +143,17 @@ def fetch_html(url, label):
         except Exception as e:
             print(f"[{label}] 取得エラー（{attempt + 1}回目）: {e}")
             if attempt == max_retries - 1:
+                print(f"[{label}] 最大リトライ到達。スキップします。")
                 return None
             time.sleep(random.uniform(2.0, 4.0))
 
 def get_image_info(url):
-    """画像のURLからファイルサイズ等のメタデータのみを軽量に取得する"""
     if not url: return {"url": None, "size": None}
     headers = HEADERS_BASE.copy()
     headers["User-Agent"] = random.choice(USER_AGENTS)
     try:
-        # HEADリクエストで画像本体をダウンロードせずにサイズだけ取得（負荷軽減）
         response = requests.head(url, headers=headers, timeout=10, allow_redirects=True)
-        if response.status_code in [405, 403]:  # HEADが禁止されているサーバー用フォールバック
+        if response.status_code in [405, 403]:
             response = requests.get(url, headers=headers, timeout=10, stream=True)
         size = response.headers.get("Content-Length")
         return {"url": url, "size": size}
@@ -318,7 +316,7 @@ def main():
     else:
         new_state["result"] = old_state.get("result", {})
 
-    # 3. エントリーリスト（ブログ）の監視（★ファイルサイズ更新検知対応）
+    # 3. エントリーリスト（ブログ）の監視
     html_blog = fetch_html(URLS["blog_entry"], "ブログ")
     if html_blog:
         scraped_blog = scrape_blog_entry_list(html_blog)
@@ -326,15 +324,11 @@ def main():
         
         for match_name, img_url in scraped_blog.items():
             old_data = old_blog_state.get(match_name)
-            
-            # 画像のメタデータ（サイズ）を取得して比較に使用
             img_info = get_image_info(img_url) if img_url else {"url": img_url, "size": None}
             
             if not old_data:
-                # 完全に新規の大会枠
                 new_state["blog_entry_list"][match_name] = img_info
             else:
-                # 古いDB(URL文字列のみ)からの安全移行対応
                 if isinstance(old_data, str):
                     old_url = old_data
                     old_size = None
@@ -344,10 +338,8 @@ def main():
                 
                 is_updated = False
                 if img_url and img_url != old_url:
-                    # URL自体が変わった場合（標準的なアップロード）
                     is_updated = True
                 elif img_url and img_url == old_url and img_info["size"] and img_info["size"] != old_size:
-                    # URLは同じだが、ファイル容量が変わった場合（同名ファイルでの完全上書きアップロード）
                     is_updated = True
                     print(f"[{match_name}] 同名ファイルの画像上書き更新を検知しました。")
                 
