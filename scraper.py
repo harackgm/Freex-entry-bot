@@ -54,7 +54,7 @@ def safe_encode_url(url, bust_cache=False):
     return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, encoded_path, parsed.params, query, parsed.fragment))
 
 def send_line_payload(messages_payload):
-    """LINE Messaging API (Push Message) - 管理者個人へ直接送信"""
+    """LINE Messaging API (Push Message) - 管理者へ直接送信（テストモード）"""
     if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
         print("[エラー] トークンまたはUSER_IDが未設定です")
         return
@@ -67,7 +67,7 @@ def send_line_payload(messages_payload):
     try:
         response = requests.post(url, headers=headers, json=data, timeout=15)
         response.raise_for_status()
-        print("-> LINE通知の送信に成功しました。")
+        print("-> LINE通知（管理者テスト用）の送信に成功しました。")
     except Exception as e:
         print(f"-> LINE通知エラー: {e}")
 
@@ -105,10 +105,10 @@ def send_result_carousel(match_name, results, match_url, timing_msg="🏆 大会
 def send_entry_list_flex(match_name, img_url, blog_url):
     safe_img_url = safe_encode_url(img_url, bust_cache=True)
     flex_payload = [{
-        "type": "flex", "altText": f"📋 エントリーリスト公開: {match_name}",
+        "type": "flex", "altText": f"📋 エントリーリスト更新: {match_name}",
         "contents": {
             "type": "bubble",
-            "header": {"type": "box", "layout": "vertical", "paddingAll": "none", "backgroundColor": "#0B2545", "contents": [{"type": "image", "url": LOGO_URL, "size": "full", "aspectRatio": "20:7", "aspectMode": "cover"}, {"type": "box", "layout": "vertical", "paddingAll": "md", "contents": [{"type": "text", "text": "📋 エントリーリスト公開", "weight": "bold", "color": "#FFFFFF", "size": "sm"}]}]},
+            "header": {"type": "box", "layout": "vertical", "paddingAll": "none", "backgroundColor": "#0B2545", "contents": [{"type": "image", "url": LOGO_URL, "size": "full", "aspectRatio": "20:7", "aspectMode": "cover"}, {"type": "box", "layout": "vertical", "paddingAll": "md", "contents": [{"type": "text", "text": "📋 エントリーリスト更新", "weight": "bold", "color": "#FFFFFF", "size": "sm"}]}]},
             "hero": {"type": "image", "url": safe_img_url, "size": "full", "aspectRatio": "3:4", "aspectMode": "fit", "action": {"type": "uri", "uri": safe_img_url}},
             "body": {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": match_name, "weight": "bold", "size": "md", "wrap": True, "align": "center"}]},
             "footer": {"type": "box", "layout": "vertical", "contents": [{"type": "button", "action": {"type": "uri", "label": "ブログページで確認する", "uri": blog_url}, "style": "primary", "color": "#0B2545", "height": "sm"}]}
@@ -135,18 +135,33 @@ def fetch_html(url, label):
     headers["User-Agent"] = random.choice(USER_AGENTS)
     max_retries = 3
     for attempt in range(max_retries):
-        time.sleep(random.uniform(2.0, 4.0)) # 待機時間を短縮
+        time.sleep(random.uniform(2.0, 4.0))
         try:
-            response = requests.get(url, headers=headers, timeout=10) # タイムアウト短縮
+            response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             print(f"[{label}] 取得成功！")
             return response.text
         except Exception as e:
             print(f"[{label}] 取得エラー（{attempt + 1}回目）: {e}")
             if attempt == max_retries - 1:
-                print(f"[{label}] 最大リトライ到達。スキップします。")
                 return None
             time.sleep(random.uniform(2.0, 4.0))
+
+def get_image_info(url):
+    """画像のURLからファイルサイズ等のメタデータのみを軽量に取得する"""
+    if not url: return {"url": None, "size": None}
+    headers = HEADERS_BASE.copy()
+    headers["User-Agent"] = random.choice(USER_AGENTS)
+    try:
+        # HEADリクエストで画像本体をダウンロードせずにサイズだけ取得（負荷軽減）
+        response = requests.head(url, headers=headers, timeout=10, allow_redirects=True)
+        if response.status_code in [405, 403]:  # HEADが禁止されているサーバー用フォールバック
+            response = requests.get(url, headers=headers, timeout=10, stream=True)
+        size = response.headers.get("Content-Length")
+        return {"url": url, "size": size}
+    except Exception as e:
+        print(f"画像サイズ取得エラー ({url}): {e}")
+        return {"url": url, "size": None}
 
 def parse_entry_start(accept_period):
     if not accept_period: return None
@@ -303,20 +318,43 @@ def main():
     else:
         new_state["result"] = old_state.get("result", {})
 
-    # 3. エントリーリスト（ブログ）の監視
+    # 3. エントリーリスト（ブログ）の監視（★ファイルサイズ更新検知対応）
     html_blog = fetch_html(URLS["blog_entry"], "ブログ")
     if html_blog:
         scraped_blog = scrape_blog_entry_list(html_blog)
         old_blog_state = old_state.get("blog_entry_list", {})
         
         for match_name, img_url in scraped_blog.items():
-            if match_name not in old_blog_state:
-                new_state["blog_entry_list"][match_name] = img_url
+            old_data = old_blog_state.get(match_name)
+            
+            # 画像のメタデータ（サイズ）を取得して比較に使用
+            img_info = get_image_info(img_url) if img_url else {"url": img_url, "size": None}
+            
+            if not old_data:
+                # 完全に新規の大会枠
+                new_state["blog_entry_list"][match_name] = img_info
             else:
-                old_img_url = old_blog_state.get(match_name)
-                if img_url and img_url != old_img_url:
+                # 古いDB(URL文字列のみ)からの安全移行対応
+                if isinstance(old_data, str):
+                    old_url = old_data
+                    old_size = None
+                else:
+                    old_url = old_data.get("url")
+                    old_size = old_data.get("size")
+                
+                is_updated = False
+                if img_url and img_url != old_url:
+                    # URL自体が変わった場合（標準的なアップロード）
+                    is_updated = True
+                elif img_url and img_url == old_url and img_info["size"] and img_info["size"] != old_size:
+                    # URLは同じだが、ファイル容量が変わった場合（同名ファイルでの完全上書きアップロード）
+                    is_updated = True
+                    print(f"[{match_name}] 同名ファイルの画像上書き更新を検知しました。")
+                
+                if is_updated:
                     notifications.append({"type": "blog_entry_list", "match_name": match_name, "img_url": img_url, "blog_url": URLS["blog_entry"]})
-                new_state["blog_entry_list"][match_name] = img_url
+                
+                new_state["blog_entry_list"][match_name] = img_info
     else:
         new_state["blog_entry_list"] = old_state.get("blog_entry_list", {})
 
