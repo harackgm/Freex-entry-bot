@@ -9,7 +9,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# 設定項目
+# 設定項目（★テスト・管理者のみ通知モード★）
 # ==========================================
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
 LINE_USER_ID = os.getenv("LINE_USER_ID", "")
@@ -44,16 +44,19 @@ USER_AGENTS = [
 ]
 
 def safe_encode_url(url, bust_cache=False):
+    """URLの安全エンコードおよびLINE画像キャッシュ回避（タイムスタンプ付与）"""
     if not url: return ""
     parsed = urllib.parse.urlparse(url)
     encoded_path = urllib.parse.quote(parsed.path)
     query = parsed.query
     if bust_cache:
         timestamp = int(time.time())
+        # 既存のクエリパラメータがあれば末尾に&t=を追加、なければt=を追加
         query = f"{query}&t={timestamp}" if query else f"t={timestamp}"
     return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, encoded_path, parsed.params, query, parsed.fragment))
 
 def send_line_payload(messages_payload):
+    """LINE Messaging API (Push Message) - 管理者へ直接送信"""
     if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
         print("[LOG ONLY - トークン未設定]")
         return
@@ -66,7 +69,7 @@ def send_line_payload(messages_payload):
     try:
         response = requests.post(url, headers=headers, json=data, timeout=15)
         response.raise_for_status()
-        print("LINE通知の送信に成功しました。")
+        print("LINE通知（管理者テスト用）の送信に成功しました。")
     except Exception as e:
         print(f"LINE通知エラー: {e}")
 
@@ -114,6 +117,7 @@ def send_result_carousel(match_name, results, match_url, timing_msg="🏆 大会
     for idx, player in enumerate(results[:10]):
         rank_label = "🥇 優勝" if idx == 0 else "🥈 第2位" if idx == 1 else "🥉 第3位" if idx == 2 else f"第{idx+1}位"
         raw_img_url = player.get("image", "")
+        # 写真がある場合はキャッシュバスティングを有効化
         img_url = safe_encode_url(raw_img_url, bust_cache=True) if raw_img_url else safe_encode_url(FALLBACK_IMG, bust_cache=False)
 
         bubble = {
@@ -144,7 +148,7 @@ def send_result_carousel(match_name, results, match_url, timing_msg="🏆 大会
         send_line_payload([{"type": "flex", "altText": f"{timing_msg}: {match_name}", "contents": {"type": "carousel", "contents": bubbles}}])
 
 def send_entry_list_flex(match_name, img_url, blog_url):
-    """エントリーリスト画像用のFlex Message送信"""
+    """エントリーリスト画像用のFlex Message送信（強制キャッシュ更新）"""
     safe_img_url = safe_encode_url(img_url, bust_cache=True)
     flex_payload = [{
         "type": "flex",
@@ -259,7 +263,6 @@ def scrape_result(html):
     return data
 
 def scrape_blog_entry_list(html):
-    """ブログ記事から各大会のエントリーリスト画像を抽出"""
     soup = BeautifulSoup(html, "html.parser")
     data = {}
     for p_tag in soup.find_all("p"):
@@ -371,7 +374,6 @@ def main():
         old_blog_state = old_state.get("blog_entry_list", {})
         
         for match_name, img_url in scraped_blog.items():
-            # 新規検知時は通知せずDB保存のみ（過去分の誤爆防止）、既存DBにある状態で画像が追加・更新されたら通知
             if match_name not in old_blog_state:
                 new_state["blog_entry_list"][match_name] = img_url
             else:
