@@ -44,21 +44,19 @@ USER_AGENTS = [
 ]
 
 def safe_encode_url(url, bust_cache=False):
-    """URLの安全エンコードおよびLINE画像キャッシュ回避（タイムスタンプ付与）"""
     if not url: return ""
     parsed = urllib.parse.urlparse(url)
     encoded_path = urllib.parse.quote(parsed.path)
     query = parsed.query
     if bust_cache:
         timestamp = int(time.time())
-        # 既存のクエリパラメータがあれば末尾に&t=を追加、なければt=を追加
         query = f"{query}&t={timestamp}" if query else f"t={timestamp}"
     return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, encoded_path, parsed.params, query, parsed.fragment))
 
 def send_line_payload(messages_payload):
-    """LINE Messaging API (Push Message) - 管理者へ直接送信"""
+    """LINE Messaging API (Push Message) - 管理者個人へ直接送信"""
     if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
-        print("[LOG ONLY - トークン未設定]")
+        print("[エラー] トークンまたはUSER_IDが未設定です")
         return
     url = "https://api.line.me/v2/bot/message/push"
     headers = {
@@ -69,45 +67,20 @@ def send_line_payload(messages_payload):
     try:
         response = requests.post(url, headers=headers, json=data, timeout=15)
         response.raise_for_status()
-        print("LINE通知（管理者テスト用）の送信に成功しました。")
+        print("-> LINE通知の送信に成功しました。")
     except Exception as e:
-        print(f"LINE通知エラー: {e}")
+        print(f"-> LINE通知エラー: {e}")
 
 def send_entry_flex(match_name, info, timing_msg="🔔 エントリー状況更新"):
     status_text = info.get("status", "ステータス更新")
     form_url = info.get("form_url", URLS["schedule"])
-    
     flex_payload = [{
-        "type": "flex",
-        "altText": f"{timing_msg}: {match_name}",
+        "type": "flex", "altText": f"{timing_msg}: {match_name}",
         "contents": {
             "type": "bubble",
-            "header": {
-                "type": "box", "layout": "vertical", "paddingAll": "none", "backgroundColor": "#0B2545",
-                "contents": [
-                    {"type": "image", "url": LOGO_URL, "size": "full", "aspectRatio": "20:7", "aspectMode": "cover"},
-                    {"type": "box", "layout": "vertical", "paddingAll": "md", "contents": [{"type": "text", "text": timing_msg, "weight": "bold", "color": "#FFFFFF", "size": "sm"}]}
-                ]
-            },
-            "body": {
-                "type": "box", "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": match_name, "weight": "bold", "size": "xl", "wrap": True},
-                    {
-                        "type": "box", "layout": "vertical", "margin": "lg", "spacing": "sm",
-                        "contents": [
-                            {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "状態", "color": "#aaaaaa", "size": "sm", "flex": 2}, {"type": "text", "text": status_text, "weight": "bold", "color": "#E53935", "size": "sm", "flex": 5, "wrap": True}]},
-                            {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "開催日", "color": "#aaaaaa", "size": "sm", "flex": 2}, {"type": "text", "text": info.get("date", "-"), "color": "#666666", "size": "sm", "flex": 5, "wrap": True}]},
-                            {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "会場", "color": "#aaaaaa", "size": "sm", "flex": 2}, {"type": "text", "text": info.get("location", "-"), "color": "#666666", "size": "sm", "flex": 5, "wrap": True}]},
-                            {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "受付期間", "color": "#aaaaaa", "size": "sm", "flex": 2}, {"type": "text", "text": info.get("accept_period", "-"), "color": "#666666", "size": "sm", "flex": 5, "wrap": True}]}
-                        ]
-                    }
-                ]
-            },
-            "footer": {
-                "type": "box", "layout": "vertical",
-                "contents": [{"type": "button", "action": {"type": "uri", "label": "エントリーページを開く", "uri": form_url}, "style": "primary", "color": "#0B2545", "height": "sm"}]
-            }
+            "header": {"type": "box", "layout": "vertical", "paddingAll": "none", "backgroundColor": "#0B2545", "contents": [{"type": "image", "url": LOGO_URL, "size": "full", "aspectRatio": "20:7", "aspectMode": "cover"}, {"type": "box", "layout": "vertical", "paddingAll": "md", "contents": [{"type": "text", "text": timing_msg, "weight": "bold", "color": "#FFFFFF", "size": "sm"}]}]},
+            "body": {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": match_name, "weight": "bold", "size": "xl", "wrap": True}, {"type": "box", "layout": "vertical", "margin": "lg", "spacing": "sm", "contents": [{"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "状態", "color": "#aaaaaa", "size": "sm", "flex": 2}, {"type": "text", "text": status_text, "weight": "bold", "color": "#E53935", "size": "sm", "flex": 5, "wrap": True}]}, {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "開催日", "color": "#aaaaaa", "size": "sm", "flex": 2}, {"type": "text", "text": info.get("date", "-"), "color": "#666666", "size": "sm", "flex": 5, "wrap": True}]}, {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "会場", "color": "#aaaaaa", "size": "sm", "flex": 2}, {"type": "text", "text": info.get("location", "-"), "color": "#666666", "size": "sm", "flex": 5, "wrap": True}]}, {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": "受付期間", "color": "#aaaaaa", "size": "sm", "flex": 2}, {"type": "text", "text": info.get("accept_period", "-"), "color": "#666666", "size": "sm", "flex": 5, "wrap": True}]}]}]},
+            "footer": {"type": "box", "layout": "vertical", "contents": [{"type": "button", "action": {"type": "uri", "label": "エントリーページを開く", "uri": form_url}, "style": "primary", "color": "#0B2545", "height": "sm"}]}
         }
     }]
     send_line_payload(flex_payload)
@@ -117,63 +90,28 @@ def send_result_carousel(match_name, results, match_url, timing_msg="🏆 大会
     for idx, player in enumerate(results[:10]):
         rank_label = "🥇 優勝" if idx == 0 else "🥈 第2位" if idx == 1 else "🥉 第3位" if idx == 2 else f"第{idx+1}位"
         raw_img_url = player.get("image", "")
-        # 写真がある場合はキャッシュバスティングを有効化
         img_url = safe_encode_url(raw_img_url, bust_cache=True) if raw_img_url else safe_encode_url(FALLBACK_IMG, bust_cache=False)
-
         bubble = {
             "type": "bubble",
-            "header": {
-                "type": "box", "layout": "vertical", "paddingAll": "none", "backgroundColor": "#0B2545",
-                "contents": [
-                    {"type": "image", "url": LOGO_URL, "size": "full", "aspectRatio": "20:7", "aspectMode": "cover"},
-                    {"type": "box", "layout": "vertical", "paddingAll": "sm", "paddingStart": "md", "contents": [{"type": "text", "text": timing_msg, "weight": "bold", "color": "#FFFFFF", "size": "xs"}]}
-                ]
-            },
+            "header": {"type": "box", "layout": "vertical", "paddingAll": "none", "backgroundColor": "#0B2545", "contents": [{"type": "image", "url": LOGO_URL, "size": "full", "aspectRatio": "20:7", "aspectMode": "cover"}, {"type": "box", "layout": "vertical", "paddingAll": "sm", "paddingStart": "md", "contents": [{"type": "text", "text": timing_msg, "weight": "bold", "color": "#FFFFFF", "size": "xs"}]}]},
             "hero": {"type": "image", "url": img_url, "size": "full", "aspectRatio": "1:1", "aspectMode": "cover"},
-            "body": {
-                "type": "box", "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": rank_label, "weight": "bold", "size": "sm", "color": "#1DB446"},
-                    {"type": "text", "text": player.get("name", "選手名未設定"), "weight": "bold", "size": "lg", "margin": "xs", "wrap": True},
-                    {"type": "text", "text": match_name, "size": "xs", "color": "#888888", "margin": "sm", "wrap": True}
-                ]
-            },
-            "footer": {
-                "type": "box", "layout": "vertical",
-                "contents": [{"type": "button", "action": {"type": "uri", "label": "結果詳細を見る", "uri": match_url}, "style": "primary", "color": "#0B2545", "height": "sm"}]
-            }
+            "body": {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": rank_label, "weight": "bold", "size": "sm", "color": "#1DB446"}, {"type": "text", "text": player.get("name", "選手名未設定"), "weight": "bold", "size": "lg", "margin": "xs", "wrap": True}, {"type": "text", "text": match_name, "size": "xs", "color": "#888888", "margin": "sm", "wrap": True}]},
+            "footer": {"type": "box", "layout": "vertical", "contents": [{"type": "button", "action": {"type": "uri", "label": "結果詳細を見る", "uri": match_url}, "style": "primary", "color": "#0B2545", "height": "sm"}]}
         }
         bubbles.append(bubble)
     if bubbles:
         send_line_payload([{"type": "flex", "altText": f"{timing_msg}: {match_name}", "contents": {"type": "carousel", "contents": bubbles}}])
 
 def send_entry_list_flex(match_name, img_url, blog_url):
-    """エントリーリスト画像用のFlex Message送信（強制キャッシュ更新）"""
     safe_img_url = safe_encode_url(img_url, bust_cache=True)
     flex_payload = [{
-        "type": "flex",
-        "altText": f"📋 エントリーリスト公開: {match_name}",
+        "type": "flex", "altText": f"📋 エントリーリスト公開: {match_name}",
         "contents": {
             "type": "bubble",
-            "header": {
-                "type": "box", "layout": "vertical", "paddingAll": "none", "backgroundColor": "#0B2545",
-                "contents": [
-                    {"type": "image", "url": LOGO_URL, "size": "full", "aspectRatio": "20:7", "aspectMode": "cover"},
-                    {"type": "box", "layout": "vertical", "paddingAll": "md", "contents": [{"type": "text", "text": "📋 エントリーリスト公開", "weight": "bold", "color": "#FFFFFF", "size": "sm"}]}
-                ]
-            },
-            "hero": {
-                "type": "image", "url": safe_img_url, "size": "full", "aspectRatio": "3:4", "aspectMode": "fit",
-                "action": {"type": "uri", "uri": safe_img_url}
-            },
-            "body": {
-                "type": "box", "layout": "vertical",
-                "contents": [{"type": "text", "text": match_name, "weight": "bold", "size": "md", "wrap": True, "align": "center"}]
-            },
-            "footer": {
-                "type": "box", "layout": "vertical",
-                "contents": [{"type": "button", "action": {"type": "uri", "label": "ブログページで確認する", "uri": blog_url}, "style": "primary", "color": "#0B2545", "height": "sm"}]
-            }
+            "header": {"type": "box", "layout": "vertical", "paddingAll": "none", "backgroundColor": "#0B2545", "contents": [{"type": "image", "url": LOGO_URL, "size": "full", "aspectRatio": "20:7", "aspectMode": "cover"}, {"type": "box", "layout": "vertical", "paddingAll": "md", "contents": [{"type": "text", "text": "📋 エントリーリスト公開", "weight": "bold", "color": "#FFFFFF", "size": "sm"}]}]},
+            "hero": {"type": "image", "url": safe_img_url, "size": "full", "aspectRatio": "3:4", "aspectMode": "fit", "action": {"type": "uri", "uri": safe_img_url}},
+            "body": {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": match_name, "weight": "bold", "size": "md", "wrap": True, "align": "center"}]},
+            "footer": {"type": "box", "layout": "vertical", "contents": [{"type": "button", "action": {"type": "uri", "label": "ブログページで確認する", "uri": blog_url}, "style": "primary", "color": "#0B2545", "height": "sm"}]}
         }
     }]
     send_line_payload(flex_payload)
@@ -191,20 +129,24 @@ def save_state(state):
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, ensure_ascii=False, indent=4)
 
-def fetch_html(url):
+def fetch_html(url, label):
+    print(f"[{label}] 取得開始...")
     headers = HEADERS_BASE.copy()
     headers["User-Agent"] = random.choice(USER_AGENTS)
     max_retries = 3
     for attempt in range(max_retries):
-        time.sleep(random.uniform(3.0, 6.0))
+        time.sleep(random.uniform(2.0, 4.0)) # 待機時間を短縮
         try:
-            response = requests.get(url, headers=headers, timeout=15)
+            response = requests.get(url, headers=headers, timeout=10) # タイムアウト短縮
             response.raise_for_status()
+            print(f"[{label}] 取得成功！")
             return response.text
         except Exception as e:
-            print(f"取得エラー ({url}) - {attempt + 1}回目: {e}")
-            if attempt == max_retries - 1: return None
-            time.sleep(random.uniform(5.0, 10.0))
+            print(f"[{label}] 取得エラー（{attempt + 1}回目）: {e}")
+            if attempt == max_retries - 1:
+                print(f"[{label}] 最大リトライ到達。スキップします。")
+                return None
+            time.sleep(random.uniform(2.0, 4.0))
 
 def parse_entry_start(accept_period):
     if not accept_period: return None
@@ -292,10 +234,8 @@ def main():
     new_state = {"schedule": {}, "result": {}, "blog_entry_list": {}}
     notifications = []
 
-    # ==========================================
     # 1. スケジュール（エントリー）の監視
-    # ==========================================
-    html_schedule = fetch_html(URLS["schedule"])
+    html_schedule = fetch_html(URLS["schedule"], "スケジュール")
     if html_schedule:
         new_state["schedule"] = scrape_schedule(html_schedule)
         for match, info in new_state["schedule"].items():
@@ -327,10 +267,8 @@ def main():
     else:
         new_state["schedule"] = old_state.get("schedule", {})
 
-    # ==========================================
     # 2. 大会結果の監視
-    # ==========================================
-    html_result = fetch_html(URLS["result"])
+    html_result = fetch_html(URLS["result"], "大会結果")
     if html_result:
         scraped_results = scrape_result(html_result)
         for match, current_players in scraped_results.items():
@@ -365,10 +303,8 @@ def main():
     else:
         new_state["result"] = old_state.get("result", {})
 
-    # ==========================================
     # 3. エントリーリスト（ブログ）の監視
-    # ==========================================
-    html_blog = fetch_html(URLS["blog_entry"])
+    html_blog = fetch_html(URLS["blog_entry"], "ブログ")
     if html_blog:
         scraped_blog = scrape_blog_entry_list(html_blog)
         old_blog_state = old_state.get("blog_entry_list", {})
@@ -387,8 +323,9 @@ def main():
     # ==========================================
     # 大量通知ストッパー（MAX_LIMIT制御）
     # ==========================================
+    print(f"\n-> 検知した変更通知件数: {len(notifications)} 件")
     if len(notifications) > MAX_NOTIFY_LIMIT:
-        print(f"⚠️ 検知数が {len(notifications)} 件となり上限を超えました。LINE送信をスキップします。")
+        print(f"⚠️ 検知数が上限（{MAX_NOTIFY_LIMIT}件）を超えました。LINE送信をスキップし、DBのみ更新します。")
     else:
         for item in notifications:
             if item["type"] == "schedule":
@@ -397,7 +334,7 @@ def main():
                 send_result_carousel(item["match_name"], item["results"], item["url"], item["timing_msg"])
             elif item["type"] == "blog_entry_list":
                 send_entry_list_flex(item["match_name"], item["img_url"], item["blog_url"])
-            time.sleep(2)
+            time.sleep(1)
 
     save_state(new_state)
     print("監視処理が完了しました。")
