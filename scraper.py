@@ -9,10 +9,9 @@ import re
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# 設定項目（★テスト・管理者のみ通知モード★）
+# 設定項目（★一般公開・全員配信モード★）
 # ==========================================
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
-LINE_USER_ID = os.getenv("LINE_USER_ID", "")
 STATE_FILE = "freex_state.json"
 MAX_NOTIFY_LIMIT = 5  # 大量誤通知ストッパー
 
@@ -54,20 +53,21 @@ def safe_encode_url(url, bust_cache=False):
     return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, encoded_path, parsed.params, query, parsed.fragment))
 
 def send_line_payload(messages_payload):
-    """LINE Messaging API (Push Message) - 管理者へ直接送信"""
-    if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_USER_ID:
-        print("[エラー] トークンまたはUSER_IDが未設定です")
+    """LINE Messaging API (Broadcast Message) - 登録者全員へ一斉送信"""
+    if not LINE_CHANNEL_ACCESS_TOKEN:
+        print("[エラー] トークンが未設定です")
         return
-    url = "https://api.line.me/v2/bot/message/push"
+    url = "https://api.line.me/v2/bot/message/broadcast"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
     }
-    data = {"to": LINE_USER_ID, "messages": messages_payload}
+    # 宛先(to)を指定せず、messagesのみを送ることで全員配信になる
+    data = {"messages": messages_payload}
     try:
         response = requests.post(url, headers=headers, json=data, timeout=15)
         response.raise_for_status()
-        print("-> LINE通知（管理者テスト用）の送信に成功しました。")
+        print("-> LINE通知（全員配信）の送信に成功しました。")
     except Exception as e:
         print(f"-> LINE通知エラー: {e}")
 
@@ -137,7 +137,6 @@ def fetch_html(url, label):
     for attempt in range(max_retries):
         time.sleep(random.uniform(2.0, 5.0))
         try:
-            # タイムアウトを15秒に戻し、接続猶予を確保
             response = requests.get(url, headers=headers, timeout=15)
             response.raise_for_status()
             print(f"[{label}] 取得成功！")
