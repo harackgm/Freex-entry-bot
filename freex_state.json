@@ -129,6 +129,19 @@
                 "0m": true,
                 "next_m": true
             }
+        },
+        "2nd JAPAN AREA SUPER CLASSIC 決勝トーナメント（2026シーズン）": {
+            "date": "2027年05月23日（日）",
+            "location": "栃木県 大芦川f＆cフィールドビレッジ",
+            "accept_period": "未定",
+            "status": "ステータス不明",
+            "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+            "notified": {
+                "24h": true,
+                "15m": true,
+                "0m": true,
+                "next_m": true
+            }
         }
     },
     "result": {
