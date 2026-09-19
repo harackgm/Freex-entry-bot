@@ -162,6 +162,24 @@
             ],
             "first_detected": "2026-09-08T02:37:34.290504+09:00",
             "photo_notified": true
+        },
+        "2026 JAPAN OPEN　　第２戦_ハーブの里フィッシングエリア": {
+            "players": [
+                {
+                    "name": "石川 潤（34）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2025/10/S__109789204_0.jpg"
+                },
+                {
+                    "name": "増田 豪正（56）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2025/10/S__109789205_0.jpg"
+                },
+                {
+                    "name": "原竹 洸一（42）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2025/10/S__109789206_0.jpg"
+                }
+            ],
+            "first_detected": "2026-09-19T19:30:35.474047+09:00",
+            "photo_notified": true
         }
     },
     "blog_entry_list": {
