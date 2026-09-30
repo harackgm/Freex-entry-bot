@@ -59,7 +59,7 @@
             "status": "募集開始前",
             "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
             "notified": {
-                "24h": false,
+                "24h": true,
                 "15m": false,
                 "0m": false,
                 "next_m": false
