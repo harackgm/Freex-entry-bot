@@ -55,9 +55,9 @@
         "2026 JAPAN OPEN　　第５戦": {
             "date": "2026年11月22日（日）",
             "location": "群馬県\nフィッシングポイントベリーズ迦葉山",
-            "accept_period": "2026-10-01～2026-11-21募集開始前",
-            "status": "募集開始前",
-            "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+            "accept_period": "2026-10-01～2026-11-21エントリーする",
+            "status": "エントリーする",
+            "form_url": "https://forms.gle/4vpyjv5rfSWmFqhP9",
             "notified": {
                 "24h": true,
                 "15m": false,
