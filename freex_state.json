@@ -60,7 +60,7 @@
             "form_url": "https://forms.gle/4vpyjv5rfSWmFqhP9",
             "notified": {
                 "24h": true,
-                "15m": false,
+                "15m": true,
                 "0m": false,
                 "next_m": false
             }
