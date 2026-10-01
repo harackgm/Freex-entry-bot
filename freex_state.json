@@ -61,7 +61,7 @@
             "notified": {
                 "24h": true,
                 "15m": true,
-                "0m": false,
+                "0m": true,
                 "next_m": false
             }
         },
