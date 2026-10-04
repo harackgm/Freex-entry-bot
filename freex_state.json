@@ -180,6 +180,24 @@
             ],
             "first_detected": "2026-09-19T19:30:35.474047+09:00",
             "photo_notified": true
+        },
+        "2026 JAPAN OPEN　　第３戦_五頭フィッシングパーク": {
+            "players": [
+                {
+                    "name": "菅原 匠（19）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2026/10/S__110813196_0.jpg"
+                },
+                {
+                    "name": "はらっく（57）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2026/10/S__110813195_0.jpg"
+                },
+                {
+                    "name": "川村 淳也（41）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2026/10/S__110813194_0.jpg"
+                }
+            ],
+            "first_detected": "2026-10-04T23:15:29.193153+09:00",
+            "photo_notified": true
         }
     },
     "blog_entry_list": {
