@@ -198,6 +198,24 @@
             ],
             "first_detected": "2026-10-04T23:15:29.193153+09:00",
             "photo_notified": true
+        },
+        "2026 JAPAN OPEN　　第４戦　　_平谷湖フィッシングスポット": {
+            "players": [
+                {
+                    "name": "青木司（41）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2025/12/S__112525323.jpg"
+                },
+                {
+                    "name": "齋藤 篤史（53）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2025/12/S__112525322.jpg"
+                },
+                {
+                    "name": "上原 優（26）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2025/12/S__112525321.jpg"
+                }
+            ],
+            "first_detected": "2026-10-26T13:00:47.456140+09:00",
+            "photo_notified": true
         }
     },
     "blog_entry_list": {
