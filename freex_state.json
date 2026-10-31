@@ -68,9 +68,9 @@
         "2026 JAPAN OPEN　　第６戦": {
             "date": "2026年12月06日（日）",
             "location": "静岡県\nアルクスポンド焼津",
-            "accept_period": "2026-11-01～2026-12-05募集開始前",
-            "status": "募集開始前",
-            "form_url": "https://freex-areatrout.com/event/area-trout-championship-2026/schedule/",
+            "accept_period": "2026-11-01～2026-12-05エントリーする",
+            "status": "エントリーする",
+            "form_url": "https://forms.gle/FudxBzR3ySd2sH2r7",
             "notified": {
                 "24h": true,
                 "15m": false,
