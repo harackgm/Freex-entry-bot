@@ -216,6 +216,24 @@
             ],
             "first_detected": "2026-10-26T13:00:47.456140+09:00",
             "photo_notified": true
+        },
+        "2026 JAPAN OPEN　　第５戦_フィッシングポイントベリーズ迦葉山": {
+            "players": [
+                {
+                    "name": "佐藤 剛（45）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2026/11/S__114892811_0.jpg"
+                },
+                {
+                    "name": "齋藤 純（25）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2026/11/S__114892810_0.jpg"
+                },
+                {
+                    "name": "北沢 拓也（36）",
+                    "image": "https://freex-areatrout.com/wp-content/uploads/2026/11/S__114892809_0.jpg"
+                }
+            ],
+            "first_detected": "2026-11-22T22:30:45.506155+09:00",
+            "photo_notified": true
         }
     },
     "blog_entry_list": {
